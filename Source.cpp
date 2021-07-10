@@ -21,17 +21,17 @@
 using namespace Eigen;
 using namespace std;
 
-int main() {
+int main(){
 
-    ofstream oFile;
+	ofstream oFile;
 
-    oFile.open("貨運統計.csv", ios::out | ios::trunc);
+    oFile.open("市區道路交通事故延續時間預測.csv", ios::out | ios::trunc);
 
 
-    //-------------------------------參數項(X矩陣)----------------------------------------//
+//--------------------------------參數項(X矩陣)----------------------------------------//
 
-    //-------------------------------台鐵貨運變數-----------------------------------------//
-    MatrixXd X(108, 3);
+//-------------------------行為參數項種類; 列為不同筆參數-----------------------------//
+ MatrixXd X(108, 3);
     X <<
     //平均每日噸數/噸延公里/平均每噸運距   
         28879, 71937134, 80,
@@ -144,66 +144,65 @@ int main() {
         19136, 43360751, 73;
 
 
+int mm=X.row(0).size();  //組間數量
+int nn=X.col(0).size(); // 回歸數量
+MatrixXd Theta_1(mm,1);             //解析回歸係數解
+MatrixXd Theta_2 (mm,1);            //梯度下降回歸係數解
 
-    int mm = X.row(0).size();  //組間數量
-    int nn = X.col(0).size(); // 回歸數量
-    MatrixXd Theta_1(mm, 1);             //解析回歸係數解
-    MatrixXd Theta_2(mm, 1);            //梯度下降回歸係數解
+srand( time(NULL) );
 
-    srand(time(NULL));
+double S1;
+double S2;
 
-    double S1;
-    double S2;
+double PROD_Multi;
+double Cossim;
 
-    double PROD_Multi;
-    double Cossim;
+double R_square;
+double SST;
+double SSE;
+double SSR;
+double Y_Nor_avg;
+//-------------------梯度下降迴歸係數初始化; 範圍設定[-1,1]---------------------------//
 
-    double R_square;
-    double SST;
-    double SSE;
-    double SSR;
-    double Y_Nor_avg;
-    //-------------------梯度下降迴歸係數初始化; 範圍設定[-1,1]---------------------------//
+for(int j=0;j<Theta_2.row(0).size();++j){
 
-    for (int j = 0; j < Theta_2.row(0).size(); ++j) {
+for(int i=0;i<Theta_2.col(0).size();++i){
 
-        for (int i = 0; i < Theta_2.col(0).size(); ++i) {
+Theta_2 (i,j)=(double) rand() /(RAND_MAX+1 );
+}
 
-            Theta_2(i, j) = (double)rand() / (RAND_MAX + 1);
-        }
+}
 
-    }
+//------------------------------------------------------------------------------------//
 
-    //------------------------------------------------------------------------------------//
+double  f;
+double  F;
+//------------------------------------------------------------------------------------//
 
-    double  f;
-    double  F;
-    //------------------------------------------------------------------------------------//
+MatrixXd X_avg(1,mm);    // 每一項參數平均值
+MatrixXd u(1,mm);        // 每一項參數最大值與最小值差
+MatrixXd X_Nor(nn,mm);    // 輸入X矩陣正規化結果
 
-    MatrixXd X_avg(1, mm);    // 每一項參數平均值
-    MatrixXd u(1, mm);        // 每一項參數最大值與最小值差
-    MatrixXd X_Nor(nn, mm);    // 輸入X矩陣正規化結果
+//------------------------------自變數X矩陣正規化----------------------------------------//
+for(int i=0;i<X.row(0).size();++i){
+ X_avg(0,i)=(X.col(i)).sum()/X.col(0).size();
+ u(0,i)=X.col(i).maxCoeff()-X.col(i).minCoeff();
 
-    //------------------------------房屋參數正規化----------------------------------------//
-    for (int i = 0; i < X.row(0).size(); ++i) {
-        X_avg(0, i) = (X.col(i)).sum() / X.col(0).size();
-        u(0, i) = X.col(i).maxCoeff() - X.col(i).minCoeff();
+}
 
-    }
+for(int i=0;i<X.col(0).size();++i){
+for(int j=0;j<X.row(0).size();++j){
 
-    for (int i = 0; i < X.col(0).size(); ++i) {
-        for (int j = 0; j < X.row(0).size(); ++j) {
+X_Nor(i,j)=(X(i,j)-X_avg(0,j))/u(0,j);
+X_Nor(i,0)=1;
 
-            X_Nor(i, j) = (X(i, j) - X_avg(0, j)) / u(0, j);
-            X_Nor(i, 0) = 1;
-
-        }
-    }
-    //cout<<u<<endl;
-    //cout<<X_Nor<<endl;
-    //------------------------------------------------------------------------------------//
-    //------------------------------------貨運收入-----------------------------------------//
-    MatrixXd Y(nn, 1);
+}
+}
+//cout<<u<<endl;
+//cout<<X_Nor<<endl;
+//------------------------------------------------------------------------------------//
+//----------------------------延遲時間正規化(單位:s)----------------------------------//
+MatrixXd Y(nn, 1);
     Y <<
         83280558,
         56199488,
@@ -315,202 +314,231 @@ int main() {
         54388041;
 
 
-    MatrixXd Y_avg(nn, 1);
-    MatrixXd Y_Nor(nn, 1);
 
-    for (int i = 0; i < Y.col(0).size(); ++i) {
-        for (int j = 0; j < Y.row(0).size(); ++j) {
+MatrixXd Y_avg(nn,1);
+MatrixXd Y_Nor(nn,1);
 
-            Y_avg(i, j) = Y.sum() / Y.size();
+for(int i=0;i<Y.col(0).size();++i){
+for(int j=0;j<Y.row(0).size();++j){
 
-            Y_Nor(i, j) = (Y(i, j) - Y_avg(0, j)) / (Y.maxCoeff() - Y.minCoeff());
+Y_avg(i,j)=Y.sum()/Y.size();
 
-
-        }
-    }
-    //------------------------------------------------------------------------------------//
-    //----------------------------------回歸解析解----------------------------------------//
-
-    Theta_1 = (X_Nor.transpose() * X_Nor).inverse() * X_Nor.transpose() * Y_Nor;
+Y_Nor(i,j)=(Y(i,j)-Y_avg(0,j))/(Y.maxCoeff()-Y.minCoeff());
 
 
-    //----------------------------------梯度下降法計算-------------------------------------//
-    MatrixXd J_Th(1, 1);
-    MatrixXd MSE(1, 1);
+}
+}
+//------------------------------------------------------------------------------------//
+//----------------------------------回歸解析解----------------------------------------//
 
-    //double s=pow(2*(X.row(0)).size(),-1);
-    MatrixXd Grad_J(nn, 1);
-    double Lr = 0.05;                 // 學習率
-    double ep = 60000;               //疊代數
-    MatrixXd J_Th_Lambda(1, 1);
-    double apha = 0.1;
-    double J[60000];
-    MatrixXd PROD(1, 1);           //
-    MatrixXd Y_R(nn, 1);
-    MatrixXd Y_Inv_nor(nn, 1);
+Theta_1=(X_Nor.transpose()*X_Nor).inverse()*X_Nor.transpose()*Y_Nor;
 
 
-
-    for (int k = 0; k < ep; ++k)
+//----------------------------------梯度下降法計算-------------------------------------//
+MatrixXd J_Th(1,1);
+MatrixXd MSE(1,1);
+ 
+//double s=pow(2*(X.row(0)).size(),-1);
+MatrixXd Grad_J(nn,1);
+double Lr=0.05;                 // 學習率
+double ep=60000;               //疊代數
+MatrixXd J_Th_Lambda(1,1);
+double apha=0.1;
+double J[60000];
+MatrixXd PROD(1,1);           //
+MatrixXd Y_R(nn,1);
+MatrixXd Y_Inv_nor(nn,1);
+MatrixXd  MAPE(nn,1);
+MatrixXd  MAPE_ratio(nn,1);
+double MAPE_sum;
+//---------------------------------------"疊代開始"----------------------------------------------------------// 
+  for(int k=0;k<ep;++k)
 
     {
 
-        //J_Th= pow(2*(X_Nor.col(0)).size(),-1)*(((X_Nor*Theta_2).array() )-(Y_Nor.array()) ).square();
+//J_Th= pow(2*(X_Nor.col(0)).size(),-1)*(((X_Nor*Theta_2).array() )-(Y_Nor.array()) ).square();
 
-        J_Th = pow(2 * (X_Nor.col(0)).size(), -1) * ((X_Nor * Theta_2 - Y_Nor).transpose()) * (X_Nor * Theta_2 - Y_Nor) + apha * pow(2 * (X_Nor.col(0)).size(), -1) * Theta_2.transpose() * Theta_2;
-        //J_Th= pow(2*(X_Nor.col(0)).size(),-1)*((X_Nor*Theta_2-Y_Nor ).transpose()) *(X_Nor*Theta_2-Y_Nor) + apha*Theta_2.transpose() * Theta_2 ;
-        MSE = pow(2 * (X_Nor.col(0)).size(), -1) * ((X_Nor * Theta_2 - Y_Nor).transpose()) * (X_Nor * Theta_2 - Y_Nor);
+J_Th= pow(2*(X_Nor.col(0)).size(),-1)*((X_Nor*Theta_2-Y_Nor ).transpose()) *(X_Nor*Theta_2-Y_Nor) + apha*pow(2*(X_Nor.col(0)).size(),-1)*Theta_2.transpose() * Theta_2 ;
+//J_Th= pow(2*(X_Nor.col(0)).size(),-1)*((X_Nor*Theta_2-Y_Nor ).transpose()) *(X_Nor*Theta_2-Y_Nor) + apha*Theta_2.transpose() * Theta_2 ;
+MSE= pow(2*(X_Nor.col(0)).size(),-1)*((X_Nor*Theta_2-Y_Nor ).transpose()) *(X_Nor*Theta_2-Y_Nor);
 
 
-        J[k] = J_Th.sum();
+J[k]=J_Th.sum();
 
-        Grad_J = 2 * pow(2 * (X_Nor.col(0)).size(), -1) * (X_Nor * Theta_2 - Y_Nor).transpose() * X_Nor;
+Grad_J= 2*pow(2*(X_Nor.col(0)).size(),-1)*(X_Nor*Theta_2-Y_Nor).transpose() * X_Nor;
 
-        //Grad_J= 2*pow(2*(X_Nor.col(0)).size(),-1)*(X_Nor*Theta_2-Y_Nor).transpose() * X_Nor;
-        Theta_2 = (1 - Lr * apha * pow((X_Nor.col(0)).size(), -1)) * Theta_2 - Lr * Grad_J.transpose();
-        //Theta_2=Theta_2-Lr*Grad_J.transpose();
+//Grad_J= 2*pow(2*(X_Nor.col(0)).size(),-1)*(X_Nor*Theta_2-Y_Nor).transpose() * X_Nor;
+Theta_2=(1-Lr*apha*pow((X_Nor.col(0)).size(),-1))*Theta_2-Lr*Grad_J.transpose();
+//Theta_2=Theta_2-Lr*Grad_J.transpose();
 
-        //-------------------------收斂條件:當下疊帶值與前一次疊帶值差值 eps<10^-8---------------------------//
-        if (abs(J[k] - J[k - 1]) < pow(10, -8))
-        {
+//-------------------------收斂條件:當下疊帶值與前一次疊帶值差值 eps<10^-8---------------------------//
+	if(abs(J[k] -J[k-1]) <pow(10,-8) )
+		{
             break;
 
         }
 
-        //-------------殘差平方和SSE(實際值Vs預測值)---------------//
-        SSE = 2 * (X_Nor.col(0)).size() * MSE(0, 0);//Σ(yi-y_hat_i)^2
+//-------------殘差平方和SSE(實際值Vs預測值)---------------//
+  SSE=2*(X_Nor.col(0)).size()* MSE(0,0);//Σ(yi-y_hat_i)^2
 
 
-      //-------------總平方和SST(實際值Vs平均值)---------------//
+//-------------總平方和SST(實際值Vs平均值)---------------//
 
-        MatrixXd SS_T(nn, 1);
+MatrixXd SS_T(nn,1);
 
-        Y_Nor_avg = Y_Nor.sum() / Y_Nor.size();
+Y_Nor_avg=Y_Nor.sum()/Y_Nor.size();
 
-        for (int i = 0; i < Y.col(0).size(); ++i) {
-            for (int j = 0; j < Y.row(0).size(); ++j) {
+for(int i=0;i<Y.col(0).size();++i){
+for(int j=0;j<Y.row(0).size();++j){
 
-                SS_T(i, j) = pow((Y_Nor(i, j) - Y_Nor_avg), 2);//Σ(yi-y_avg)^2
+SS_T(i,j)=pow((Y_Nor(i,j)-Y_Nor_avg),2);//Σ(yi-y_avg)^2
 
-            }
-        }
-        SST = SS_T.sum();
-
-
-
-
-        R_square = 1 - SSE / SST;
-
-        Y_R = X_Nor * Theta_2;
-
-        MatrixXd SS_R(nn, 1);
-
-        //-------------總平方和SSR(實際結果Vs平均值)---------------//
-
-        for (int i = 0; i < Y.col(0).size(); ++i) {
-            for (int j = 0; j < Y.row(0).size(); ++j) {
-
-                SS_R(i, j) = pow((Y_R(i, j) - Y_Nor_avg), 2);//Σ(y_hat_i-y_avg)^2
-
-
-            }
-        }
-
-        SSR = SS_R.sum();
-        f = (SSR) / (SSE);
-
-        F = f * (nn - mm - 1) / mm;
-
-
-        //-----------------------複相關分析-------------------------// 
+}
+}
+SST=SS_T.sum();
 
 
 
 
+R_square=1- SSE/SST;
+
+Y_R=X_Nor*Theta_2;
+
+MatrixXd SS_R(nn,1);
+
+//-------------總平方和SSR(實際結果Vs平均值)---------------//
+
+for(int i=0;i<Y.col(0).size();++i){
+for(int j=0;j<Y.row(0).size();++j){
+
+SS_R(i,j)=pow((Y_R(i,j)-Y_Nor_avg),2);//Σ(y_hat_i-y_avg)^2
 
 
-        oFile << "epoch=" << k << "  ,  " << " MSE= " << "  ,  " << J[k] << "  ,  " << R_square << endl;
+}
+}
+
+ SSR=SS_R.sum();
+f=(SSR)/(SSE);
+
+F=f*(nn-mm-1)/mm;
 
 
-    }
-
-    //cout<<MSE<<endl;
-    cout << endl;
-
-    for (int i = 0; i < Y.col(0).size(); ++i) {
-        for (int j = 0; j < Y.row(0).size(); ++j) {
-
-            Y_Inv_nor(i, j) = Y_R(i, j) * (Y.maxCoeff() - Y.minCoeff()) + Y_avg(0, j);
-
-        }
-    }
-
-    MatrixXd COV1(nn, 1);
-    MatrixXd COV2(nn, 1);
-
-    PROD = (Y_Inv_nor).transpose() * Y;
-
-    PROD_Multi = PROD(0, 0);
+//-----------------------複相關分析-------------------------// 
 
 
 
-    COV1 = (Y_Inv_nor).array().square();
-    COV2 = (Y).array().square();
-
-    S1 = COV1.sum();
-    S2 = COV2.sum();
 
 
-    Cossim = PROD_Multi / sqrt(S1 * S2);
+
+oFile <<"epoch="<< k  << "  ,  " <<" MSE= "<< "  ,  "<<J[k] << "  ,  " << R_square<< endl;
 
 
-    oFile << Y_Inv_nor << Y << endl;
-   
-    cout << "---------------------------------------------------" << endl;
-    cout << "|                     迴歸係數                     |" << endl;
-    cout << "---------------------------------------------------" << endl;
-    cout << endl;
-    for (int i = 0; i < Theta_2.col(0).size(); ++i) {
-        for (int j = 0; j < Theta_2.row(0).size(); ++j) {
-            cout << "Beta_" << i << " = " << Theta_2(i, j) << endl;
-            cout << endl;
-        }
-    }
+}
 
-    cout << "----------------------------------------------------" << endl;
-    cout << "|                 R平方值與擬合程度                 |" << endl;
-    cout << "----------------------------------------------------" << endl;
 
-    cout << "SSE=" << SSE << endl;
-    cout << endl;
 
-    cout << "SST=" << SST << endl;
-    cout << endl;
 
-    cout << "R_sqare=1-(SSE/SST)" << endl;
-    cout << endl;
 
-    cout << "R_square=" << R_square << endl;
-    cout << endl;
-    if (R_square < 0.5)
+for(int i=0;i<Y.col(0).size();++i){
+for(int j=0;j<Y.row(0).size();++j){
 
-        cout << "欠擬合(underfitting)" << endl;
+Y_Inv_nor(i,j)=Y_R(i,j)*(Y.maxCoeff()-Y.minCoeff())+Y_avg(0,j);
 
-    else if (R_square > 0.5 && R_square < 0.9)
+}
+}
 
-        cout << "擬合" << endl;
+for(int iii=0;iii<Y.col(0).size();++iii){
+for(int jjj=0;jjj<Y.row(0).size();++jjj){
 
-    else if (R_square > 0.9)
+MAPE_ratio(iii,jjj)=(Y(iii,jjj)-Y_Inv_nor(iii,jjj))/Y(iii,jjj); 
 
-        cout << "過擬合(overfitting)" << endl;
+}
+}
 
-    cout << "F-value" << endl;
 
-    cout << F << endl;
+MatrixXd COV1(nn,1);
+MatrixXd COV2(nn,1);
 
-    cout << "預測與實際準確度 " << endl;
-    cout << Cossim << endl;
+PROD=(Y_Inv_nor).transpose()*Y;
 
+PROD_Multi=PROD(0,0);
+
+
+
+COV1=(Y_Inv_nor).array().square();
+COV2=(Y).array().square();
+
+S1=COV1.sum();
+S2=COV2.sum();
+
+
+Cossim=PROD_Multi/sqrt(S1*S2);
+
+
+oFile <<Y_Inv_nor<<Y<<endl;
+
+//cout<<endl;
+//cout<<X<<endl;
+//cout<<"X矩陣正規化"<<endl;
+//cout<<endl;
+//cout<<X_Nor<<endl;
+//cout<<endl;
+//cout<<" 房價 (Y)  "   <<endl;
+//cout<<endl;
+//cout<< Y <<endl;
+//cout<<endl;
+//cout<<"模擬後房價結果"<<endl;
+//cout<<endl;
+//cout<<Y_Inv_nor<<endl;
+//cout<<endl;
+cout<<"---------------------------------------------------"<<endl;
+cout<<"|                     迴歸係數                     |"<<endl;
+cout<<"---------------------------------------------------"<<endl;
+cout<<endl;
+for(int i=0;i<Theta_2.col(0).size();++i){
+for(int j=0;j<Theta_2.row(0).size();++j){
+cout<<"Beta_"<<i<<" = "<<Theta_2(i,j)<<endl;
+cout<<endl;
+}
+}
+
+cout<<"----------------------------------------------------"<<endl;
+cout<<"|                 R平方值與擬合程度                 |"<<endl;
+cout<<"----------------------------------------------------"<<endl;
+
+cout<<"SSE="<<SSE<<endl;
+cout<<endl;
+
+cout<<"SST="<<SST<<endl;
+cout<<endl;
+
+cout<<"R_sqare=1-(SSE/SST)"<<endl;
+cout<<endl;
+
+cout<<"R_square="<<R_square<<endl;
+cout<<endl;
+if(R_square<0.5)
+
+cout<<"欠擬合(underfitting)"<<endl;
+
+else if (R_square>0.5&&R_square<0.9)
+
+cout<<"擬合"<<endl;
+
+else if (R_square>0.9)
+
+cout<<"過擬合(overfitting)"<<endl;
+
+cout<<"F-value"<<endl;
+
+cout<<F<<endl;
+
+cout<<"預測與實際準確度 "<<endl;  
+cout<<Cossim<<endl;  
+
+cout<<"MAPE值"<<endl; 
+
+cout<< abs(MAPE_ratio.sum())/nn<<endl;           
 
 }
 
