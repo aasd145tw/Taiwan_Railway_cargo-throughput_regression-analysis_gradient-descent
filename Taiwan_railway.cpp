@@ -25,7 +25,7 @@ int main(){
 
 	ofstream oFile;
 
-    oFile.open("交通意外.csv", ios::out | ios::trunc);
+    oFile.open("Taiwan_Railway_cargo.csv", ios::out | ios::trunc);
 
 
 //--------------------------------參數項(X矩陣)----------------------------------------//
