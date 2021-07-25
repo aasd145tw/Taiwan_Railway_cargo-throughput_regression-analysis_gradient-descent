@@ -25,7 +25,7 @@ int main(){
 
 	ofstream oFile;
 
-    oFile.open("貨運資料.csv", ios::out | ios::trunc);
+    oFile.open("交通意外.csv", ios::out | ios::trunc);
 
 
 //--------------------------------參數項(X矩陣)----------------------------------------//
@@ -122,7 +122,7 @@ MatrixXd X(108, 4);
 1,	28912,	50861576,	57,
 1,	24137,	45905226,	61,
 1,	17191,	40609689,	76,
-1,	21740,	47228587,	70,
+1,	21740,	47228587,	70, 
 1,	20273,	43847209,	70,
 1,	31142,	70609012,	76,
 1,	31966,	72889915,	76,
@@ -142,7 +142,6 @@ MatrixXd X(108, 4);
 1,	21968,	48595355,	71,
 1,	20151,	44528089,	71,
 1,	19136,	43360751,	73;
-  
 
 
 int mm=X.row(0).size();  //組間數量
@@ -388,6 +387,7 @@ MatrixXd SS_T(nn,1);
 
 Y_Nor_avg=Y_Nor.sum()/Y_Nor.size();
 
+Y_R=X_Nor*Theta_2;
 
 for(int i=0;i<Y.col(0).size();++i){
 for(int j=0;j<Y.row(0).size();++j){
@@ -412,22 +412,25 @@ SST=SS_T.sum();
 
 R_square=1- SSE/SST;
 
-Y_R=X_Nor*Theta_2;
 
-MatrixXd SS_R(nn,1);
+
+//MatrixXd SS_R(nn,1);
 
 //-------------總平方和SSR(實際結果Vs平均值)---------------//
 
-for(int i=0;i<Y.col(0).size();++i){
-for(int j=0;j<Y.row(0).size();++j){
+//for(int i=0;i<Y.col(0).size();++i){
+//for(int j=0;j<Y.row(0).size();++j){
 
-SS_R(i,j)=pow((Y_R(i,j)-Y_Nor_avg),2);//Σ(y_hat_i-y_avg)^2
+//SS_R(i,j)=pow((Y_R(i,j)-Y_Nor_avg),2);//Σ(y_hat_i-y_avg)^2
 
 
-}
-}
+//}
+//}
 
- SSR=SS_R.sum();
+// SSR=SS_R.sum();
+SSR=SST-SSE;
+
+
 f=(SSR)/(SSE);
 
 F=f*(nn-mm-1)/mm;
@@ -489,6 +492,9 @@ cout<<"----------------------------------------------------"<<endl;
 cout<<"|                 R平方值與擬合程度                 |"<<endl;
 cout<<"----------------------------------------------------"<<endl;
 
+cout<<"SSR="<<SSR<<endl;
+cout<<endl;
+
 cout<<"SSE="<<SSE<<endl;
 cout<<endl;
 
@@ -521,11 +527,10 @@ cout<<Cossim<<endl;
 
 cout<<"MAPE值"<<endl; 
 
-cout<< abs(MAPE_ratio.sum())/nn<<endl;           
+cout<< abs(MAPE_ratio.sum())/nn<<endl;       
+
+cout<<Theta_1<<endl;    
 
 
 } 
  
-
-
-
