@@ -1,4 +1,3 @@
-
 #include <unsupported/Eigen/MatrixFunctions>
 #include <cstdio>
 #include <iostream>
@@ -402,7 +401,7 @@ Y_Inv_nor(i,j)=Y_R(i,j)*(Y.maxCoeff()-Y.minCoeff())+Y_avg(0,j);
 for(int i=0;i<Y.col(0).size();++i){
 for(int j=0;j<Y.row(0).size();++j){
 
-SS_T(i,j)=pow((Y(i,j)-Y_avg(0,j)),2);//Σ(yi-y_avg)^2
+SS_T(i,j)=pow((Y_Nor(i,j)-Y_Nor_avg),2);//Σ(yi-y_avg)^2
 
 }
 }
@@ -422,7 +421,7 @@ MatrixXd SS_R(nn,1);
 for(int i=0;i<Y.col(0).size();++i){
 for(int j=0;j<Y.row(0).size();++j){
 
-SS_R(i,j)=pow((Y_Inv_nor(i,j)-Y_avg(0,j)),2);//Σ(y_hat_i-y_avg)^2
+SS_R(i,j)=pow((Y_R(i,j)-Y_Nor_avg),2);//Σ(y_hat_i-y_avg)^2
 
 
 }
@@ -525,15 +524,8 @@ cout<<"MAPE值"<<endl;
 cout<< abs(MAPE_ratio.sum())/nn<<endl;           
 
 
-
-
-
-
-}
-
-
-
-
+} 
+ 
 
 
 
